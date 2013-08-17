@@ -1,8 +1,22 @@
 <header class="row">
     <div class="col-12 col-lg-6 logo">
         <a href="/">
-            <img src="images/logo@2x.png" width="83px" height="75px" alt="hip - Hype Index Program">
+            <img src="/images/logo@2x.png" width="83px" height="75px" alt="hip - Hype Index Program">
         </a>
+        <nav class="navigation" role="navigation">
+            <ul>
+                <li {{#if menuOverview}} class="active" {{/if}}><a href="/"><span class="foundicon-graph"></span></a></li>
+            </ul>
+        </nav>
     </div>
-    <div class="col-12 col-lg-6"></div>
+    <div class="col-12 col-lg-6">
+        <nav class="navigation right" role="navigation">
+            <ul>
+                <li {{#if menuSettings}} class="active" {{/if}}><a href="/settings/"><span class="foundicon-settings"></span></a></li>
+            </ul>
+        </nav>
+    </div>
+
 </header>
+    <hr />
+

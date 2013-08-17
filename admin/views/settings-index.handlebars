@@ -1,0 +1,35 @@
+<div class="col-12">
+    <div class="col-6 no-padding">
+        <h4><span class="icon-outside"><i class="social-foundicon-rss"></i></span> RSS Feeds Administration</h4>
+    </div>
+    <div class="col-6 navigation-submenu">
+        <a href="/settings/rss/add" ><span class="foundicon-add-doc"></span></a>
+    </div>
+
+</div>
+<div class="col-12">
+    <div class=" clearfix">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Database</th>
+                    <th>Feed URL</th>
+                    <th class="center">Options</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {{#each feeds}}
+                <tr>
+                    <td>{{_id}}</td>
+                    <td>{{name}}</td>
+                    <td>{{db}}</td>
+                    <td>{{feed}}</td>
+                    <td class="center"><a href="admin/rss-feeds/delete/1" class="option-button" title="Remove {{name}} from RSS Feeds"><i class="foundicon-remove "></a></td>
+            {{/each}}
+            </tbody>
+        </table>
+    </div>
+</div>

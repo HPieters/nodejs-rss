@@ -1,5 +1,5 @@
 (function() {
-  var app, db, express, feeds, hbs, nano, path, revision, update_global;
+  var addRecord, app, couch, dbs, express, feeds, hbs, nodeCouchDB, path, revision, updateGlobal;
 
   express = require('express');
 
@@ -7,15 +7,39 @@
 
   path = require('path');
 
-  nano = require('nano')('http://192.168.1.15:5984');
+  nodeCouchDB = require('node-couchdb');
+
+  couch = new nodeCouchDB("localhost", 5984);
 
   app = express();
 
+  hbs = hbs.create({
+    defaultLayout: 'main',
+    helpers: {
+      rawArray: function(input) {
+        var addElement, commaHelper, element, string, _i, _len;
+        commaHelper = input.length;
+        string = '[';
+        addElement = function(element) {
+          string += "'" + element + "'";
+          commaHelper--;
+          if (commaHelper !== 0) {
+            return string += ",";
+          }
+        };
+        for (_i = 0, _len = input.length; _i < _len; _i++) {
+          element = input[_i];
+          addElement(element);
+        }
+        string += ']';
+        return string;
+      }
+    }
+  });
+
   app.configure(function() {
     app.set('views', __dirname + '/views');
-    app.engine('handlebars', hbs({
-      defaultLayout: 'main'
-    }));
+    app.engine('handlebars', hbs.engine);
     app.set('view engine', 'handlebars');
     app.use(express.favicon());
     app.use(express.logger('dev'));
@@ -25,43 +49,98 @@
     return app.use(express["static"](path.join(__dirname, 'public')));
   });
 
-  db = nano.use('global');
+  revision = '';
 
-  revision = {
-    'rss-feeds': ''
-  };
+  feeds = [];
 
-  feeds = '';
+  dbs = [];
 
-  db.get('rss-feeds', {
-    revs_info: true
-  }, function(err, body) {
+  couch.get("global", "rss-feeds", function(err, res) {
+    var data, element, key, processElement, value, _ref, _results;
     if (err) {
-      return console.log(err);
+      return console.error(err);
     } else {
-      revision['rss-feeds'] = body._rev;
-      return feeds = body.feeds;
+      data = res.data;
+      revision = res.data._rev;
+      _ref = res.data;
+      _results = [];
+      for (key in _ref) {
+        value = _ref[key];
+        if (key !== '_id' && key !== '_rev' && key !== '' && key !== '_revs_info') {
+          dbs.push(key);
+          processElement = function(element) {
+            element.db = key;
+            return feeds.push(element);
+          };
+          _results.push((function() {
+            var _i, _len, _results1;
+            _results1 = [];
+            for (_i = 0, _len = value.length; _i < _len; _i++) {
+              element = value[_i];
+              _results1.push(processElement(element));
+            }
+            return _results1;
+          })());
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
     }
   });
 
-  update_global = function(doc) {
-    return db.insert({
-      '_rev': revision[doc],
-      content: content
-    }, doc, function(err, body) {
+  updateGlobal = function(doc) {
+    var docu, field, value;
+    value = {
+      'name': doc.name,
+      'feed': doc.feed
+    };
+    field = doc.db;
+    docu = {
+      "_id": "rss-feeds",
+      "_rev": revision
+    };
+    docu[doc.db] = value;
+    return couch.update("global", docu, function(err, resData) {
       if (err) {
-        return console.log(err);
-      } else {
-        return console.log(body);
+        console.error(err);
       }
+      return console.log(resData);
     });
+  };
+
+  addRecord = function(data) {
+    var value;
+    value = {
+      'db': data.param('rss_db'),
+      'name': data.param('rss_name'),
+      'feed': data.param('rss_feed')
+    };
+    return updateGlobal(value);
   };
 
   app.get("/", function(req, res) {
     return res.render('index', {
-      'feeds': feeds,
-      'title': 'test'
+      'menuOverview': true
     });
+  });
+
+  app.get("/settings", function(req, res) {
+    return res.render('settings-index', {
+      'feeds': feeds,
+      'menuSettings': true
+    });
+  });
+
+  app.get("/settings/rss/add", function(req, res) {
+    return res.render('settings/rss/add', {
+      'menuSettings': true,
+      'dbs': dbs
+    });
+  });
+
+  app.post("/settings/rss/add", function(req, res) {
+    return addRecord(req);
   });
 
   app.listen(3000);
