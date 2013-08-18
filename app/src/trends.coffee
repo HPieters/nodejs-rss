@@ -15,6 +15,8 @@ logging     =
 
 database    =
     'name'          : 'global'
+
+keyword     =  '' #Insert Keyword here
 # Predefinitions
 
 db = nano.use database.name
@@ -89,7 +91,7 @@ getData( (err, res) ->
         .on('readable', () ->
             stream = this
             while (item = stream.read())
-                if checkKeyword('bitcoin',item.title) or checkKeyword('bitcoin',item.description)
+                if checkKeyword(keyword,item.title) or checkKeyword(keyword,item.description)
                     item._id = item.title
                     insert_couchdb_doc(value.db, item, 0)
         )

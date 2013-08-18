@@ -1,5 +1,5 @@
 (function() {
-  var database, db, feedparser, getData, http, insert_couchdb_doc, logging, nano, request, winston;
+  var database, db, feedparser, getData, http, insert_couchdb_doc, keyword, logging, nano, request, winston;
 
   http = require('http');
 
@@ -18,6 +18,8 @@
   database = {
     'name': 'global'
   };
+
+  keyword = '';
 
   db = nano.use(database.name);
 
@@ -100,7 +102,7 @@
         stream = this;
         _results = [];
         while ((item = stream.read())) {
-          if (checkKeyword('bitcoin', item.title) || checkKeyword('bitcoin', item.description)) {
+          if (checkKeyword(keyword, item.title) || checkKeyword(keyword, item.description)) {
             item._id = item.title;
             _results.push(insert_couchdb_doc(value.db, item, 0));
           } else {
