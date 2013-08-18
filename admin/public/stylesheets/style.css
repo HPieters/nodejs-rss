@@ -114,3 +114,7 @@ footer {
 .no-padding {
     padding-left: 0;
 }
+
+.form-broad {
+    width: 40%;
+}

@@ -3,7 +3,7 @@
         <h4><span class="icon-outside"><i class="social-foundicon-rss"></i></span> RSS Feeds Administration</h4>
     </div>
     <div class="col-6 navigation-submenu">
-        <a href="/settings/rss/add" ><span class="foundicon-add-doc"></span></a>
+        <a href="/settings/rss/create" ><span class="foundicon-add-doc"></span></a>
     </div>
 
 </div>
@@ -27,7 +27,7 @@
                     <td>{{name}}</td>
                     <td>{{db}}</td>
                     <td>{{feed}}</td>
-                    <td class="center"><a href="admin/rss-feeds/delete/1" class="option-button" title="Remove {{name}} from RSS Feeds"><i class="foundicon-remove "></a></td>
+                    <td class="center"><a href="/settings/rss/delete/{{db}}/{{_id}}" class="option-button" title="Remove {{name}} from RSS Feeds"><i class="foundicon-remove "></a></td>
             {{/each}}
             </tbody>
         </table>
