@@ -1,5 +1,5 @@
 (function() {
-  var database, db, feedparser, getData, http, insert_couchdb_doc, keyword, logging, nano, request, winston;
+  var db, feedparser, getData, getDateTime, http, insert_couchdb_doc, nano, request, runtime, settings, winston;
 
   http = require('http');
 
@@ -11,20 +11,23 @@
 
   winston = require('winston');
 
-  logging = {
-    'location': 'log/error.log'
+  settings = {
+    'log_err_location': 'log/error.log',
+    'log_info_location': 'log/info.log',
+    'rss_feeds': 'global',
+    'keyword': 'bitcoin',
+    'limit': 10
   };
 
-  database = {
-    'name': 'global'
+  runtime = {
+    'running': 0,
+    'added': 0
   };
 
-  keyword = 'bitcoin';
-
-  db = nano.use(database.name);
+  db = nano.use(settings.rss_feeds);
 
   winston.add(winston.transports.File, {
-    filename: logging.location
+    filename: settings.log_err_location
   });
 
   /**
@@ -48,12 +51,20 @@
             return winston.log('error', error);
           }
         }
+      } else {
+        return runtime.added += 1;
       }
     });
   };
 
+  /**
+   * Get data from the database
+   * @param  {callback}   function
+  */
+
+
   getData = function(callback) {
-    db = nano.use(database.name);
+    db = nano.use(settings.rss_feeds);
     return db.get("rss-feeds", function(err, res) {
       var element, handleElement, key, result, value, _i, _len;
       if (err) {
@@ -82,8 +93,27 @@
     });
   };
 
+  getDateTime = function() {
+    var date, day, hour, min, month, sec, year;
+    date = new Date();
+    hour = date.getHours();
+    hour = (hour < 10 ? "0" : "") + hour;
+    min = date.getMinutes();
+    min = (min < 10 ? "0" : "") + min;
+    sec = date.getSeconds();
+    sec = (sec < 10 ? "0" : "") + sec;
+    year = date.getFullYear();
+    month = date.getMonth() + 1;
+    month = (month < 10 ? "0" : "") + month;
+    day = date.getDate();
+    day = (day < 10 ? "0" : "") + day;
+    return year + ":" + month + ":" + day + ":" + hour + ":" + min + ":" + sec;
+  };
+
+  winston.info("Start: " + (getDateTime()));
+
   getData(function(err, res) {
-    var checkKeyword, main, value, _i, _len, _results;
+    var checkKeyword, done, feedReader, main;
     checkKeyword = function(keyword, string) {
       if ((string != null) && (keyword != null)) {
         if (string.toLowerCase().indexOf(keyword.toLowerCase()) !== -1) {
@@ -92,11 +122,10 @@
           return false;
         }
       } else {
-        winston.log('error', 'String was null');
         return false;
       }
     };
-    main = function(value) {
+    main = function(value, callback) {
       return request(value.feed).pipe(new feedparser()).on('error', function(error) {
         return winston.log('error', error);
       }).on('meta', function(meta) {}).on('readable', function() {
@@ -104,22 +133,37 @@
         stream = this;
         _results = [];
         while ((item = stream.read())) {
-          if (checkKeyword(keyword, item.title) || checkKeyword(keyword, item.description)) {
+          if (checkKeyword(settings.keyword, item.title) || checkKeyword(settings.keyword, item.description)) {
             item._id = item.title;
-            _results.push(insert_couchdb_doc(value.db, item, 0));
+            insert_couchdb_doc(value.db, item, 0);
+            _results.push(callback());
           } else {
-            _results.push(void 0);
+            _results.push(callback());
           }
         }
         return _results;
       });
     };
-    _results = [];
-    for (_i = 0, _len = res.length; _i < _len; _i++) {
-      value = res[_i];
-      _results.push(main(value));
-    }
-    return _results;
+    done = function() {
+      return winston.info("Done: " + (getDateTime()) + " - Added " + runtime.added);
+    };
+    feedReader = function() {
+      var feed;
+      while (runtime.running < settings.limit && res.length > 0) {
+        feed = res.shift();
+        main(feed, function() {
+          runtime.running--;
+          if (res.length > 0) {
+            return feedReader();
+          }
+        });
+        runtime.running++;
+      }
+      if (res.length === 0 || res.lenth < 0) {
+        return done();
+      }
+    };
+    return feedReader();
   });
 
 }).call(this);

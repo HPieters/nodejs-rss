@@ -13,6 +13,7 @@
     "feedparser": "~0.16.1",
     "request": "~2.26.0",
     "nano": "~4.1.1",
-    "winston": "~0.7.2"
+    "winston": "~0.7.2",
+    "async": "~0.2.9"
   }
 }

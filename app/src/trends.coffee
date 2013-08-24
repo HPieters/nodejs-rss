@@ -1,28 +1,28 @@
 
-# Required librarys
-
+# Libraries
 http        = require 'http'
 nano        = require('nano')('http://localhost:5984')
 feedparser  = require 'feedparser'
 request     = require 'request'
 winston     = require 'winston'
 
-
 # Settings
+settings    =
+    'log_err_location'  :   'log/error.log' # Location of the error file
+    'log_info_location' :   'log/info.log'  # Location of the info file
+    'rss_feeds'         :   'global'        # Database where rss feeds are stored
+    'keyword'           :   'bitcoin'       # Keyword to search on
+    'limit'             :   10              # Maximum number of requests running
 
-logging     =
-    'location'      : 'log/error.log'
 
-database    =
-    'name'          : 'global'
+runtime     =
+    'running'           :   0               # Current running requests (operationsal do not change)
+    'added'             :   0
 
-keyword     =  'bitcoin' #Insert Keyword here
 # Predefinitions
-
-db = nano.use database.name
-
+db      = nano.use settings.rss_feeds
 winston.add winston.transports.File,
-    filename: logging.location
+    filename: settings.log_err_location
 
 # Program functions (move to seprate documentation later)
 
@@ -44,13 +44,15 @@ insert_couchdb_doc = (database_name, doc, tried) ->
             else
                 if error.status_code != 409
                     winston.log('error', error);
+        else
+            runtime.added += 1
 
-# Main programming loop
-
-
-
+###*
+ * Get data from the database
+ * @param  {callback}   function
+###
 getData = (callback) ->
-    db = nano.use database.name
+    db = nano.use settings.rss_feeds
     db.get("rss-feeds", (err, res) ->
         if err
             console.error err
@@ -65,10 +67,27 @@ getData = (callback) ->
                         result.push item
 
                     handleElement element for element in value
-
             callback(null, result)
     )
 
+getDateTime = ->
+  date = new Date()
+  hour = date.getHours()
+  hour = ((if hour < 10 then "0" else "")) + hour
+  min = date.getMinutes()
+  min = ((if min < 10 then "0" else "")) + min
+  sec = date.getSeconds()
+  sec = ((if sec < 10 then "0" else "")) + sec
+  year = date.getFullYear()
+  month = date.getMonth() + 1
+  month = ((if month < 10 then "0" else "")) + month
+  day = date.getDate()
+  day = ((if day < 10 then "0" else "")) + day
+  year + ":" + month + ":" + day + ":" + hour + ":" + min + ":" + sec
+
+
+# Call main programming loop with callback
+winston.info("Start: #{getDateTime()}")
 getData( (err, res) ->
     checkKeyword = (keyword, string) ->
         if string? and keyword?
@@ -77,10 +96,9 @@ getData( (err, res) ->
             else
                 false
         else
-            winston.log('error', 'String was null');
             false
 
-    main = (value) ->
+    main = (value, callback) ->
         request(value.feed)
         .pipe(new feedparser())
         .on('error', (error) ->
@@ -92,12 +110,31 @@ getData( (err, res) ->
         .on('readable', () ->
             stream = this
             while (item = stream.read())
-                if checkKeyword(keyword,item.title) or checkKeyword(keyword,item.description)
+                if checkKeyword(settings.keyword,item.title) or checkKeyword(settings.keyword,item.description)
                     item._id = item.title
                     insert_couchdb_doc(value.db, item, 0)
+                    callback()
+                else
+                    callback()
         )
 
-    main value for value in res
+    done = ->
+        winston.info("Done: #{getDateTime()} - Added #{runtime.added}")
+
+    feedReader = ->
+        while runtime.running < settings.limit and res.length > 0
+            feed = res.shift()
+            main feed, ->
+                runtime.running--
+                feedReader() if res.length > 0
+
+            runtime.running++
+        if res.length is 0 or res.lenth < 0
+            done()
+
+    feedReader()
 
 )
+
+
 
