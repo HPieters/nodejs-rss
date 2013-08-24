@@ -16,7 +16,7 @@ logging     =
 database    =
     'name'          : 'global'
 
-keyword     =  '' #Insert Keyword here
+keyword     =  'bitcoin' #Insert Keyword here
 # Predefinitions
 
 db = nano.use database.name
@@ -42,7 +42,8 @@ insert_couchdb_doc = (database_name, doc, tried) ->
                     insert_couchdb_doc(database_name, doc, tried + 1)
                 )
             else
-                winston.log('error', error);
+                if error.status_code != 409
+                    winston.log('error', error);
 
 # Main programming loop
 

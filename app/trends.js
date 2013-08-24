@@ -19,7 +19,7 @@
     'name': 'global'
   };
 
-  keyword = '';
+  keyword = 'bitcoin';
 
   db = nano.use(database.name);
 
@@ -44,7 +44,9 @@
             return insert_couchdb_doc(database_name, doc, tried + 1);
           });
         } else {
-          return winston.log('error', error);
+          if (error.status_code !== 409) {
+            return winston.log('error', error);
+          }
         }
       }
     });
