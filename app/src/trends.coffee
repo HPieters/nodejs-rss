@@ -109,13 +109,13 @@ getData( (err, res) ->
         )
         .on('readable', () ->
             stream = this
+            #console.log stream.read()
             while (item = stream.read())
                 if checkKeyword(settings.keyword,item.title) or checkKeyword(settings.keyword,item.description)
                     item._id = item.title
                     insert_couchdb_doc(value.db, item, 0)
-                    callback()
-                else
-                    callback()
+        ).on('end', () ->
+            callback()
         )
 
     done = ->
@@ -129,7 +129,8 @@ getData( (err, res) ->
                 feedReader() if res.length > 0
 
             runtime.running++
-        if res.length is 0 or res.lenth < 0
+
+        if res.length is 0
             done()
 
     feedReader()

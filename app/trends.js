@@ -135,13 +135,14 @@
         while ((item = stream.read())) {
           if (checkKeyword(settings.keyword, item.title) || checkKeyword(settings.keyword, item.description)) {
             item._id = item.title;
-            insert_couchdb_doc(value.db, item, 0);
-            _results.push(callback());
+            _results.push(insert_couchdb_doc(value.db, item, 0));
           } else {
-            _results.push(callback());
+            _results.push(void 0);
           }
         }
         return _results;
+      }).on('end', function() {
+        return callback();
       });
     };
     done = function() {
@@ -159,7 +160,7 @@
         });
         runtime.running++;
       }
-      if (res.length === 0 || res.lenth < 0) {
+      if (res.length === 0) {
         return done();
       }
     };
